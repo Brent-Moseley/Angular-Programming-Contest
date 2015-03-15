@@ -1,0 +1,78 @@
+<!doctype html>
+<html ng-app="courttimes">
+<head>
+	<title>Angular Programming Contest</title>
+	<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+    <script src="controllers/maincontroller.js"></script>
+	<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+	<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" type="text/css">
+	<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.4.0/lodash.min.js"></script>
+	<link rel="stylesheet" href="css/page3.css" type="text/css">
+
+</head>
+<body>
+	<div id="container" ng-controller="MainController">
+		<div id="inner_container">
+			<div id="left_side">
+
+			</div>
+
+		    <div id="middle">
+		    	Localized Map
+		    </div>
+
+		    <div id="right_side" style="font-size: 20px;">
+            <div style="display: inline-block; width: 200px; margin-right: 20px; text-align: right">    Fleet Status
+            </div> 
+            <div style="display: inline-block; width: 100px; text-align: right">
+              {{time}}
+            </div>
+		    	
+		      <table style="font-size: 16px; margin: 0 auto;">
+		      	<thead>
+                  <tr>
+                  	<th>Heli</th>
+                  	<th>Pickups</th>
+                  	<th>Passengers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="heli in heliStatus">
+                    <td>{{heli.name}}</td>
+                    <td>{{heli.pick}}</td>
+                    <td>{{heli.pass}}</td>
+                  </tr>
+                </tbody>
+              </table>
+          <br>
+		    	Passenger Status
+		      <table style="font-size: 14px; margin: 0 auto;">
+		      	<thead>
+              <tr>
+              	<th style="text-align: left">Name</th>
+              	<th>City</th>
+              	<th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="passenger in passengersShow">
+                <td style="text-align: left">{{passenger.name}}</td>
+                <td>{{passenger.city}}</td>
+                <td>{{passenger.status}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <br>
+          Everyone arrived? {{allPassengersArrived}}
+
+		    </div>	       
+
+
+       </div> 
+    </div>
+
+  </body>
+</html>
+
+

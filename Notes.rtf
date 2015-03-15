@@ -1,0 +1,58 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww12860\viewh10740\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\f0\fs32 \cf0 Helicopter Class:\
+    	position X\
+    	position Y\
+	passenger array (0 to 3 passengers)\
+	pickups array (0 to 3 passengers)\
+	METHODS:\
+       	addPassenger (passenger)\
+	addPickup (passenger)\
+	getNumPassengers\
+	getNumPickups\
+\
+Passenger Class:\
+	name\
+	lat\
+	lng\
+	status\
+	timePickedUp\
+	timeDroppedOff\
+	timeInTransit\
+	timeReady\
+	timeWaiting\
+\
+	\
+Ready Queue Class\
+	Passenger numbers are identified (or objects are put on this queue), dispatch algorithm will watch for these, decide when to send a helicopter.  Dispatcher sends this request to the helicopter by putting the passenger in its queue (length of passenger queue plus pickup queue cannot be more than 3). When the helicopter picks up the passenger, it will remove the object from its pickup queue and put it in its passenger queue. \
+\
+Helicopter Queue\
+	 An array so the dispatch algorithm can keep track of its 3 helicopters, just contains those 3 helicopter objects\
+\
+When the user clicks a passenger marker on the map, his status goes to ready and he starts jumping up and down.  His status changes in the table. When picked up, his marker is removed and status changes to in transit.  When dropped off, his status changes to at destination and his time is tallied. \
+\
+Dispatch algorithm (run through all passengers in the ready queue):\
+For each, find the nearest helicopter.  If full (3 passengers + pickups), then move on to the next.  If not, dispatch that helicopter to go do the pickup (put it on his queue).  \
+\
+Future more advanced Dispatch algorithm:  Dispatch will look at the current queues for each helicopter and search for an optimal sorting so that all current and ready passengers are picked up and delivered.  Will add up each permutation and then assign the best overall. \
+\
+Helicopter algorithm:\
+If has passengers, head straight for destination unless dispatch says to pick up a new passenger.  When a new passenger pickup is ordered, helicopter will run through a distance algorithm, testing all permutations of pickup before final delivery.  Will choose the shortest.\
+\
+Twist:  Every minute, the app will choose a random passenger to designate as ready.\
+Need formula to translate lat / long distance into miles\
+May need to bump up to 30 passengers. \
+Helicopters can go 200 mph.\
+\
+Directives:\
+Get code working by doing things as controllers functions and JS objects.  Then refactor to make helicopter a directive that can communicate with dispatch controller function.  Passengers will be a directive that can communicate with the helicopter.  Also create a directive for the passengers table, helicopter status table, and a log directive (shown as a popup).  Use directives to make the passengers and helicopters web components.\
+\
+\
+Step 1:  Just get so a helicopter can pick up one passenger that is selected and take to destination.  Make a dispatcher that runs every 100 ms to run the helicopter. Do a click event on each passenger to get picked up.\
+\
+-112.28 to -111.80       0.48 \
+33.15 to 33.80             0.65     }
