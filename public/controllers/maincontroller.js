@@ -464,7 +464,7 @@ var app = angular
             var dx = target.getLng() - posX;
             var dy = target.getLat() - posY;
             // distance in coordinate variance, velocity in mph, timeSlice in ms
-            var moves = distancePerMove (dx, dy, dist, 1500, 50);  // 1200 mph
+            var moves = distancePerMove (dx, dy, dist, 1500, 50);  // 1500 mph
             movex = moves[0];
             movey = moves[1];
             console.log ('Moves: ' + movex + ' ' + movey)    
@@ -651,9 +651,10 @@ var app = angular
          angular.forEach (helicopters, function (heli, j) {
            if (!heli.goingToDestination() &&
                (heli.getNumPassengers() + heli.getNumPickups() < 3)) {
-             
-             // only consider helicopters not going to the destination.
-               // Only if it has more room
+               // Only consider helicopters not going to the destination.
+               // Only if it has more room.
+               // If so, create a list of distances from this helictoper to
+               // all waiting passengers
                helis_avail++;
                var distances = [];
                var posX = heli.getX();
@@ -690,6 +691,9 @@ var app = angular
          var shortesti = 0;
          var shortest_heli = 0;
          for (var cc = 0; cc < 3; cc++) {
+           // Considering just the next available passenger in the waiting queue,
+           // Find the available helicopter that is closest and then assign it for
+           // the pickup.   cc is the helicopter
            if (distance_table[cc][0].dist < shortest) {
              shortest = distance_table[cc][0].dist;
              shortest_heli = cc;
