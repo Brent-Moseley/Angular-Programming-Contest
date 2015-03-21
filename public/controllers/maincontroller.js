@@ -656,7 +656,7 @@ var app = angular
          //  Algirthm B:  Make the list of distances.  Always choose the one most
          //    opportune pick up per turn, as long as the Heli has room. 
          //
-         //   Times:   6:10.0
+         //   Times:   6:10.0, 6:28.2
          //
          //  Code is gold!   Knowledge is power, technical know-how and experience
          //  is my power in the market! 
