@@ -368,6 +368,10 @@ var app = angular
           }          
           this.addPickup = function (newPassenger) {
             console.log ('  Heli ' + name + ' reporting in on pickup for:' + newPassenger.getName());
+            if (Math.random(1) * 100 < 75) {
+              return false;
+              // they are often lazy and just won't do a pickup!!
+            }
             if (pickup.length + passenger.length < 4 && goingToDest) {
               // 4 here, because the destination counts as one "pickup"
               // pickup should always be empty if we are going to dest,
@@ -453,11 +457,12 @@ var app = angular
             var dx = target.getLng() - posX;
             var dy = target.getLat() - posY;
             // distance in coordinate variance, velocity in mph, timeSlice in ms
-            var moves = distancePerMove (dx, dy, dist, 2500, 50);  // 1500 mph
+            var moves = distancePerMove (dx, dy, dist, 2800, 50);  // 1500 mph
             movex = moves[0];
             movey = moves[1];
           }
 
+         // TIMES:  2:56, 2:46.4, 2:43.6
 
           function setFirst () {
             setTarget (pickup[0]);
@@ -781,6 +786,10 @@ var app = angular
            console.log (waiting_queue[shortesti]);
            console.log ('  Waiting queue before:');
            console.log (waiting_queue);
+           if (Math.random(1) * 100 < 20) {
+             shortest_heli = 0;
+             // dispatch is sometimes lazy and just picks the first heli
+           }
            var gtg = dispatchAddPickupHC (shortest_heli, waiting_queue[shortesti]);   // add closest to HC pickup queue
            if (!gtg) console.log ('ERROR:  heli could not do pickup!!');
            else waiting_queue.splice (shortesti, 1);   // remove from waiting list    
