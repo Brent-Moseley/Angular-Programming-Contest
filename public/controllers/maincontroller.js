@@ -236,33 +236,6 @@ var app = angular
           }          
         ];
 
-        var windConditions = [
-          {
-            "day": "Day 1",
-            "vx": -6,   // -6 indicates from the east at 6 mph
-            "vy": 22    // 22 indicates from the south at 22 mph
-          },
-          {
-            "day": "Day 2",
-            "vx": 28,   // 28 indicates from the west at 28 mph
-            "vy": -19    // -10 indicates from the north at 19 mph
-          },
-          {
-            "day": "Day 3",
-            "vx": 11,
-            "vy": 33
-          },
-          {
-            "day": "Day 4",
-            "vx": -60,
-            "vy": 2
-          },
-          {
-            "day": "Day 5",
-            "vx": 0,
-            "vy": 0
-          },          
-        ];
 
         var targetLat = 33.484467;
         var targetLng = -111.97536;
@@ -295,7 +268,7 @@ var app = angular
        };  
 
        function createMarker (map, myLatlng, name, i) {
-          var icons = ['heli-green mini.png', 'heli-blue redo.png', 'helicopter - red enLarge.png'] //  'heli-red.png']
+          var icons = ['heli-green mini.png', 'heli-blue redo.png', 'helicopter - red enLarge.png', 'heli-red.png', 'icon_helicopter.png'];
           if (i == -1)     // refactor!
             var current = new google.maps.Marker({
               position: myLatlng,
@@ -304,10 +277,19 @@ var app = angular
               title: name,
               clickable: false
             })
-          else if (i < -1)     // -4, -3, -2, refactor
+          else if (i == -10)     // -6, -5, -4, -3, -2, refactor
             var current = new google.maps.Marker({
               position: myLatlng,
-              icon: icons[i+4],
+              icon: 'rain_snow.png',
+              opacity: 0,
+              map: map,
+              title: 'Helicopter Doom!',
+              clickable: false
+            })   
+          else if (i < -1 && i > -10)     // -6, -5, -4, -3, -2, refactor
+            var current = new google.maps.Marker({
+              position: myLatlng,
+              icon: icons[i+6],
               map: map,
               title: 'Helicopter Service',
               clickable: false
@@ -343,7 +325,7 @@ var app = angular
        };
 
 
-
+        var num_helis = 5;
         //  Helicopter constructor function
         //  Constructor takes a start X and Y (make random in simulation)
         //  Coordinate are lat / lng
@@ -471,7 +453,7 @@ var app = angular
             var dx = target.getLng() - posX;
             var dy = target.getLat() - posY;
             // distance in coordinate variance, velocity in mph, timeSlice in ms
-            var moves = distancePerMove (dx, dy, dist, 1500, 50);  // 1500 mph
+            var moves = distancePerMove (dx, dy, dist, 2500, 50);  // 1500 mph
             movex = moves[0];
             movey = moves[1];
           }
@@ -493,6 +475,17 @@ var app = angular
             // var newY = posY + moveY * 0.001;
             posX += movex;
             posY += movey;
+            if (isStorm) {
+              var closeX = Math.abs(posX - stormX);
+              var closeY = Math.abs(posY - stormY-0.12);
+              //debugger;
+              if (closeX < 0.08 && closeY < 0.08) {
+                // too damn close to the storm!!!
+                posX += Math.random (1) * 0.06 - 0.03;
+                posY += Math.random (1) * 0.06 - 0.03;
+                setFirst();   // set course again!!
+              }
+            }            
             var newPos = new google.maps.LatLng(posY, posX);
             marker.setPosition (newPos);
             // posX = newX;
@@ -549,13 +542,17 @@ var app = angular
        var passenger_list = [];
        var helicopters = [];
        var waiting_queue = [];
-       var minute_counter = 0;
+       var storms = [];
+       var isStorm = false;
+       var stormX, stormY, stormMX, stormMY, stormOpacity = 0;
+
        //  Start of Execution
        showOnMap();
        createPassengers();
        createHelicopters();
        var start = new Date().getTime();
        $scope.time = '';
+       $scope.isStorm = false;
        $scope.passengersShow = passengers.slice (0, -1);
 
 
@@ -572,6 +569,20 @@ var app = angular
          $scope.wait = waiting_queue;
        } , 333);    // Expensive operation, only call every third second
 
+       setInterval(function(){
+         $scope.isStorm = isStorm;
+         if (isStorm) runStorms ();
+       } , 130);    // Expensive operation, only call every third second
+
+       setInterval(function(){
+         if (isStorm) return;   // already a storm!
+         if (Math.floor (Math.random() * 100) < 50) {  // 30
+           console.log ('creating storm');
+           // 5% chance every 3 seconds to kick off a big storm
+           createStorms();
+           //isStorm = true;
+         }
+       } , 3000);  
 
       setInterval(function(){       
         var list = passengersNotReady();
@@ -580,7 +591,7 @@ var app = angular
           console.log ('Computer clicking: ' + who);
           list[who].clickMe();
         }
-        }, 45000);  // 45 seconds
+        }, 30000);  // 30 seconds
 
        $scope.allPassengersArrived = false;
        function allPassengersArrived () {
@@ -611,18 +622,54 @@ var app = angular
        }
 
        function createHelicopters () {
-         var name = ['Mean Green', 'Blue-beri', 'Hot Tamale']
-         var i = -4;
-         while (helicopters.length < 3) {
+         var name = ['Mean Green', 'Blue-beri', 'Hot Tamale', 'Red Chili', 'Black Hawk']
+         var i = -6;
+         while (helicopters.length < num_helis) {
            var randLat = Math.random (1) * 0.65 + 33.15;
            var randLng = -111.8 - Math.random (1) * 0.48;
            var heliLatlng = new google.maps.LatLng(randLat, randLng);
            var markerHeli = createMarker (map, heliLatlng, "", i);  // -4, -3, -2
-           var newHeli = new Helicopter(randLng, randLat, markerHeli, name[i+4]);
+           var newHeli = new Helicopter(randLng, randLat, markerHeli, name[i+6]);
            newHeli.setDestination(passenger_list[passenger_list.length - 1]);
            helicopters.push(newHeli);
            i++;
          }
+       }
+
+       function createStorms () {
+         // stormX, stormY, stormMX, stormMY
+         var randLat = Math.random (1) * 0.65 + 33.15;
+         var randLng = -111.8 - Math.random (1) * 0.48;
+         stormX = randLng;
+         stormY = randLat;
+         stormMX = Math.random (1) * 0.03 - 0.015;
+         stormMY = Math.random (1) * 0.03 - 0.015;
+         var stormLatlng = new google.maps.LatLng(randLat, randLng);
+         if (storms.length == 0) {
+           var markerStorm = createMarker (map, stormLatlng, "", -10);
+           storms.push(markerStorm);
+         }
+         else {
+           console.log ('Using existing');
+           storms[0].setOpacity (0);
+           storms[0].setPosition (stormLatlng);
+         }
+         stormOpacity = 0;
+         isStorm = true;        
+       }
+
+       function runStorms () {
+         stormX += stormMX;
+         stormY += stormMY;
+         if (stormX < -113 || stormX > -111 ||
+             stormY < 32.5 || stormY > 34.5) {
+           // Storm is off boundary
+           isStorm = false;
+         }
+         stormOpacity += 0.07;
+         var newPos = new google.maps.LatLng(stormY, stormX);
+         storms[0].setPosition (newPos);   
+         storms[0].setOpacity (stormOpacity);      
        }
 
        function dispatchAddPickup (passenger) {
@@ -709,7 +756,7 @@ var app = angular
  
          var shortest = 999;
          var shortesti = shortest_pass = shortest_heli =  0;
-         for (var heli = 0; heli < 3; heli++) {
+         for (var heli = 0; heli < num_helis; heli++) {
            // Considering just the next available passenger in the waiting queue,
            // Find the available helicopter that is closest and then assign it for
            // the pickup.   cc is the helicopter
@@ -751,7 +798,7 @@ var app = angular
        }
 
        function dispatch () {
-         for (var i = 0; i < 3; i++)
+         for (var i = 0; i < num_helis; i++)
            helicopters[i].run();
          statusUpdate (helicopters);
          var now = new Date().getTime();
@@ -769,7 +816,7 @@ var app = angular
        $scope.passengersShow = passenger_list;
        function statusUpdate (heli) {
          $scope.heliStatus = [];
-         for (var i = 0; i < 3; i++) {
+         for (var i = 0; i < num_helis; i++) {
            $scope.heliStatus.push({
              name: heli[i].getName(),
              pass: heli[i].getNumPassengers(),
