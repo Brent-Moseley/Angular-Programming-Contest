@@ -299,6 +299,7 @@ var app = angular
               position: myLatlng,
               icon: 'Person.png',
               map: map,
+              zIndex: -10,
               title: passengers[i].name,
               desc: passengers[i].desc,
               city: passengers[i].city,
@@ -363,15 +364,21 @@ var app = angular
           this.getY = function () {
             return posY;
           }
+          this.getMoveX = function () {
+            return movex;
+          }
+          this.getMoveY = function () {
+            return movey;
+          }          
           this.getName = function () {
             return name;
           }          
           this.addPickup = function (newPassenger) {
             console.log ('  Heli ' + name + ' reporting in on pickup for:' + newPassenger.getName());
-            if (Math.random(1) * 100 < 75) {
-              return false;
-              // they are often lazy and just won't do a pickup!!
-            }
+            // if (Math.random(1) * 100 < 65) {
+            //   return false;
+            //   // they are often lazy or not ready and just won't do a pickup!!
+            // }
             if (pickup.length + passenger.length < 4 && goingToDest) {
               // 4 here, because the destination counts as one "pickup"
               // pickup should always be empty if we are going to dest,
@@ -399,6 +406,19 @@ var app = angular
             }
           }
 
+          this.bump = function (otherMovex, otherMovey) {
+            console.log (' Bumped!! ' + otherMovex*15 + ' ' + otherMovey*15);
+            if (movex == 0 && movey == 0) {
+              console.log ('Not moving, so taking other velocity.');
+              posX += otherMovex * 15;
+              posY += otherMovey * 15;            }
+            else {
+              console.log (' bumped based on my velocity: ' + movex*10 + ' ' + movey*10);
+              posX -= movex * 10;
+              posY -= movey * 10;
+            }
+            setFirst();   // set course again!!
+          }
 
           // primary run function, call on a regular basis to give the
           // helicopter a "move" turn.
@@ -410,6 +430,7 @@ var app = angular
                 if (pickup[currentTarget].getCity() == 'Destination') {
                   console.log ('At final destination!!');
                   goingToDest = false;
+                  movex = movey = 0;
                   pickup = [];
                   angular.forEach (passenger, function (pass) {
                     pass.status = "Arrived";
@@ -564,6 +585,8 @@ var app = angular
 
        //*****   MAIN TIMER LOOP  ********
        // ********************************
+
+       //  file://localhost/Users/brentmoseley/Projects/Angular-contest/public/mappage.html
        setInterval(function(){
          dispatch ();
        } , 50);    // 50
@@ -578,6 +601,10 @@ var app = angular
          $scope.isStorm = isStorm;
          if (isStorm) runStorms ();
        } , 130);    // Expensive operation, only call every third second
+
+       setInterval(function(){
+         collisionDetector();
+       } , 750);    // Expensive operation, only call every three quarters of a second
 
        setInterval(function(){
          if (isStorm) return;   // already a storm!
@@ -676,6 +703,42 @@ var app = angular
          storms[0].setPosition (newPos);   
          storms[0].setOpacity (stormOpacity);      
        }
+
+       function collisionDetector () {
+         // var targetLat = 33.484467;
+         // var targetLng = -111.97536;
+         angular.forEach (helicopters, function (heli, i) {
+            var j = i + 1;
+            //debugger;
+            var posX = heli.getX();
+            var posY = heli.getY();
+            var myMoveX = heli.getMoveX();
+            var myMoveY = heli.getMoveY();
+            while (j < num_helis) {
+              var secondX = helicopters[j].getX();
+              var secondY = helicopters[j].getY();
+              var otherMoveX = helicopters[j].getMoveX();
+              var otherMoveY = helicopters[j].getMoveY();
+              var closeX = Math.abs(posX - secondX);
+              var closeY = Math.abs(posY - secondY);
+              var sameX = (myMoveX < 0 && otherMoveX < 0) ||
+                          (myMoveX > 0 && otherMoveX > 0);
+              var sameY = (myMoveY < 0 && otherMoveY < 0) ||
+                          (myMoveY > 0 && otherMoveY > 0); 
+              if (myMoveX == 0 && myMoveY == 0) sameY = sameX = false;  
+              if (otherMoveX == 0 && otherMoveY == 0) sameY = sameX = false; 
+              if (closeX < 0.03 && closeY < 0.03 && !sameX && !sameY) {
+                 // heli collision!!
+
+                 heli.bump(otherMoveX, otherMoveY);
+                 helicopters[j].bump(myMoveX, myMoveY);
+                 return;
+              }
+              j++;
+            }
+         });
+       }
+
 
        function dispatchAddPickup (passenger) {
          console.log (' Pushing a passenger onto waiting_queue:');
@@ -786,10 +849,10 @@ var app = angular
            console.log (waiting_queue[shortesti]);
            console.log ('  Waiting queue before:');
            console.log (waiting_queue);
-           if (Math.random(1) * 100 < 20) {
-             shortest_heli = 0;
-             // dispatch is sometimes lazy and just picks the first heli
-           }
+           // if (Math.random(1) * 100 < 20) {
+           //   shortest_heli = 0;
+           //   // dispatch is sometimes lazy and just picks the first heli
+           // }
            var gtg = dispatchAddPickupHC (shortest_heli, waiting_queue[shortesti]);   // add closest to HC pickup queue
            if (!gtg) console.log ('ERROR:  heli could not do pickup!!');
            else waiting_queue.splice (shortesti, 1);   // remove from waiting list    
