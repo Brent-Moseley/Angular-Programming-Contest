@@ -1,15 +1,16 @@
 var app = angular
     .module('courttimes',[])
     .controller('MainController',function($scope){
-        var markers = [];
 
+        //  put this in a main controller, with all the timer blocks and app level vars
+        var markers = [];
         function getAll () {
           showOnMap();
           return true;
         };
 
 
-        //  HELPER FUNCTIONS
+        //  HELPER FUNCTIONS   put in a helpers directory under public
         /*
         ** Computes distance between two points specified with lat and lng coordinates.
         */
@@ -64,6 +65,9 @@ var app = angular
             return latDirection + lngDirection;
         }
 
+
+        //
+        //  DATA - put in a service to just return this JSON (), simulated http call to a backend
         var passengers = [
           {
             "name": "Rick James",
@@ -237,8 +241,11 @@ var app = angular
         ];
 
 
+        // put in main controller
         var targetLat = 33.484467;
         var targetLng = -111.97536;
+
+        // put this in map component directory
         var mapOptions = {
           zoom: 12,
           mapTypeControl: false,
@@ -269,7 +276,7 @@ var app = angular
 
        function createMarker (map, myLatlng, name, i) {
           var icons = ['heli-green mini.png', 'heli-blue redo.png', 'helicopter - red enLarge.png', 'heli-red.png', 'icon_helicopter.png'];
-          if (i == -1)     // refactor!
+          if (i == -1)     // refactor!  Break up into separate functions: createTargetMarker, createStormMarker, createHeliMarker, createPersonMarker
             var current = new google.maps.Marker({
               position: myLatlng,
               icon: 'target.gif',
@@ -326,7 +333,11 @@ var app = angular
        };
 
 
-        var num_helis = 5;
+        var num_helis = 5;   // app level var in main controller 
+
+        //  Object goes in the model dir, break functions up into doing one thing each, one level of 
+        //  abstraction or responsibility, more details provided lower.
+        // 
         //  Helicopter constructor function
         //  Constructor takes a start X and Y (make random in simulation)
         //  Coordinate are lat / lng
@@ -351,12 +362,22 @@ var app = angular
           this.getNumPassengers = function () {
             return passenger.length;
           }
+          this.getPickups = function () {
+            return pickup;
+          }
+          this.getPassengers = function () {
+            return passenger;
+          }          
           this.getNumPickups = function () {
             if (goingToDest) return 0;
             else return pickup.length;
           }
           this.goingToDestination = function () {
             return goingToDest;
+          }
+          this.getMarker = function () {
+            debugger;
+            return marker;
           }
           this.getX = function () {
             return posX;
@@ -389,6 +410,7 @@ var app = angular
               pickup.push (newPassenger);  // Accept new passenger
               currentTarget = 0;
               setFirst();
+              reOrder();
               return true;          
             }
             else if (pickup.length + passenger.length < 3 && !goingToDest) { 
@@ -398,12 +420,14 @@ var app = angular
                 currentTarget = 0;
                 setFirst();
               }
+              else reOrder();
               return true;
             }
             else {
               console.log ('  No can do!!! Already have:' + pickup.length + ' ' + passenger.length + ' ' + goingToDest);
               return false;
             }
+            reOrder();     // Shuffle passengers to get nearest first, then second nearest, etc. 
           }
 
           this.bump = function (otherMovex, otherMovey) {
@@ -428,6 +452,7 @@ var app = angular
               if (there) {
                 console.log ('Arrived at: ' + pickup[currentTarget].getCity());
                 if (pickup[currentTarget].getCity() == 'Destination') {
+                  // Put into a function called unload
                   console.log ('At final destination!!');
                   goingToDest = false;
                   movex = movey = 0;
@@ -438,7 +463,9 @@ var app = angular
                   passenger = [];
                   currentTarget = -1;
                   $scope.allPassengersArrived = allPassengersArrived();
-                  if ($scope.allPassengersArrived) alert ("All Done!!");
+                  if ($scope.allPassengersArrived) alert ("All Done!!");   // **** So hard to find endpoint of the game here,
+                                                                           // put into a helper function called from the main
+                                                                           // controller
                   console.log ('passenger_list now: ' + String(passenger_list.length));
                   return;
                 }
@@ -448,9 +475,10 @@ var app = angular
                 if (pickup.length == 0 && passenger.length == 0) {
                   // No passengers left to pick up
                   currentTarget = -1;
-                  // Add pickup destination if passengers here
                   return;
                 }
+
+                // Put all this into a function below called setDestinationWhenFull
                 if (passenger.length == 3 || 
                     (passenger.length > 0 && pickup.length == 0)) {
                   // we have the 3 passengers, now add destination
@@ -458,6 +486,7 @@ var app = angular
                   goingToDest = true;
                 }
                 setTarget (pickup[currentTarget]);
+                // So hard to read, this if block is way too long!! 
               }
 
             }
@@ -465,25 +494,58 @@ var app = angular
           }
 
           this.setDestination = function (dest) {
+            //  Why this function?  
             destination = dest;
           }
-          this.getMarker = function () {
-            return marker;
-          }
 
-          // private functions
+          // put small functions and getters at top of object definition
+
+          // Helicopter private functions
           function setTarget (target) {
-            // Switch this below?
             var dist = distanceBetweenGeoPoints(posY, posX, target.getLat(), target.getLng()); // lat1, lng1, lat2, lng2
             var dx = target.getLng() - posX;
             var dy = target.getLat() - posY;
             // distance in coordinate variance, velocity in mph, timeSlice in ms
-            var moves = distancePerMove (dx, dy, dist, 2800, 50);  // 1500 mph
+            var moves = distancePerMove (dx, dy, dist, 2800, 50);  // 1500 mph, speed is very important, put at top of object as constant
             movex = moves[0];
             movey = moves[1];
           }
 
-         // TIMES:  2:56, 2:46.4, 2:43.6
+         // TIMES:  2:56, 2:46.4, 2:43.6, 1:59.6, 1:54.9
+
+          function reOrder () {
+            console.log ('   *** REORDER ***');
+            var distance_table = [];
+            angular.forEach (pickup, function (passenger, i) {
+              distance_table.push ({
+                index: i,
+                dist: distanceBetweenGeoPoints(posY, posX, passenger.getLat(), passenger.getLng()),
+                pass: passenger
+              });
+            });
+
+            var j = 0;
+            while (j < distance_table.length-1) {
+              if (distance_table[j+1]['dist'] < distance_table[j]['dist']) {
+                // switch them
+                var temp = distance_table[j+1];
+                distance_table[j+1] = distance_table[j];
+                distance_table[j] = temp;
+                j = -1;
+              }
+              j++;
+            }
+            console.log ('  Updated distance table in heli reOrder:');
+            console.log (distance_table);
+            pickup = [];
+            angular.forEach (distance_table, function (dist) {
+              pickup.push(dist.pass);
+            });
+            console.log ('   And resulting pickup queue:');
+            console.log (pickup);
+            setFirst();
+
+          }
 
           function setFirst () {
             setTarget (pickup[0]);
@@ -521,14 +583,7 @@ var app = angular
         }     
 
         // Passenger constructor function
-        // Takes in an options object in this format:
-        // {
-        //     "name": "Rick James",
-        //     "city": "Phoenix",
-        //     "zip": 85051,
-        //     "lat": 33.5791048,
-        //     "lng": -112.1515555
-        // }
+        // Put this into Passenger model
         function Passenger (options, pNumber) {
           // publicly accessible instance vars
           this.name = options.name;
@@ -572,7 +627,8 @@ var app = angular
        var isStorm = false;
        var stormX, stormY, stormMX, stormMY, stormOpacity = 0;
 
-       //  Start of Execution
+
+       //  Start of Execution - put this into the main controller
        showOnMap();
        createPassengers();
        createHelicopters();
@@ -585,7 +641,7 @@ var app = angular
 
        //*****   MAIN TIMER LOOP  ********
        // ********************************
-
+       //  Also keep in main controller
        //  file://localhost/Users/brentmoseley/Projects/Angular-contest/public/mappage.html
        setInterval(function(){
          dispatch ();
@@ -604,6 +660,7 @@ var app = angular
 
        setInterval(function(){
          collisionDetector();
+         statusUpdate (helicopters);
        } , 750);    // Expensive operation, only call every three quarters of a second
 
        setInterval(function(){
@@ -612,7 +669,6 @@ var app = angular
            console.log ('creating storm');
            // 5% chance every 3 seconds to kick off a big storm
            createStorms();
-           //isStorm = true;
          }
        } , 3000);  
 
@@ -627,7 +683,7 @@ var app = angular
 
        $scope.allPassengersArrived = false;
        function allPassengersArrived () {
-         var arrived = 0;
+         var arrived = 0;      // num arrived
          angular.forEach (passenger_list, function (pass) {
            if (pass.getName() != 'Destination' &&
                pass.getStatus() == 'Arrived') arrived++;
@@ -669,7 +725,7 @@ var app = angular
        }
 
        function createStorms () {
-         // stormX, stormY, stormMX, stormMY
+         // Most of this should be in a constructor of a Storm class
          var randLat = Math.random (1) * 0.65 + 33.15;
          var randLng = -111.8 - Math.random (1) * 0.48;
          stormX = randLng;
@@ -705,8 +761,10 @@ var app = angular
        }
 
        function collisionDetector () {
+         //  Put this in Dispatch object
          // var targetLat = 33.484467;
          // var targetLng = -111.97536;
+         return;
          angular.forEach (helicopters, function (heli, i) {
             var j = i + 1;
             //debugger;
@@ -739,7 +797,7 @@ var app = angular
          });
        }
 
-
+       // create a Dispatch object for this
        function dispatchAddPickup (passenger) {
          console.log (' Pushing a passenger onto waiting_queue:');
          waiting_queue.push (passenger);
@@ -748,6 +806,7 @@ var app = angular
          return true;
        }
 
+       $scope.waiting_queue = [];
        function dispatchManageWaitingQueue () {
          // This is the main logic for added passengers to the best helicopter
          // available, the goal here is to keep this queue empty and to keep the
@@ -771,10 +830,15 @@ var app = angular
          //  Algirthm B:  Make the list of distances.  Always choose the one most
          //    opportune pick up per turn, as long as the Heli has room. 
          //
-         //   Times:   6:10.0, 6:28.2
+         //   Times:   
          //
          //  Code is gold!   Knowledge is power, technical know-how and experience
-         //  is my power in the market! 
+         //  is my power in the market!  The better you get at it, the more you will get
+         //  paid to do it, the more prestige you will have, and the more fun you will have
+         //  doing it! 
+
+         //   Break into multiple functions
+         $scope.waiting_queue = waiting_queue;
          if (waiting_queue.length == 0) return;  // Nothing to do!!
          console.log (' Waiting queue length: ' + waiting_queue.length);
          var distance_table = [];
@@ -854,7 +918,7 @@ var app = angular
            //   // dispatch is sometimes lazy and just picks the first heli
            // }
            var gtg = dispatchAddPickupHC (shortest_heli, waiting_queue[shortesti]);   // add closest to HC pickup queue
-           if (!gtg) console.log ('ERROR:  heli could not do pickup!!');
+           if (!gtg) console.log ('ERROR:  heli could not do pickup!!');     // Should never see this!
            else waiting_queue.splice (shortesti, 1);   // remove from waiting list    
            console.log ('  Waiting queue after:');
            console.log (waiting_queue);     
@@ -869,10 +933,13 @@ var app = angular
          return added;
        }
 
+       
        function dispatch () {
+         // $scope.allPickups = [];
+         // $scope.allPassengers = [];
          for (var i = 0; i < num_helis; i++)
            helicopters[i].run();
-         statusUpdate (helicopters);
+         //statusUpdate (helicopters);
          var now = new Date().getTime();
          now -= start;
          var mins = String (Math.floor(now / 60000));
@@ -888,11 +955,16 @@ var app = angular
        $scope.passengersShow = passenger_list;
        function statusUpdate (heli) {
          $scope.heliStatus = [];
+         //$scope.allPickups.push(heli.getPickups());
+         //$scope.allPassengers.push(heli.getPassengers());
          for (var i = 0; i < num_helis; i++) {
            $scope.heliStatus.push({
              name: heli[i].getName(),
-             pass: heli[i].getNumPassengers(),
-             pick: heli[i].getNumPickups()
+             numPassengers: heli[i].getNumPassengers(),
+             numPickups: heli[i].getNumPickups(),
+             passengers: heli[i].getPassengers(),
+             pickups: heli[i].getPickups(),
+             marker: heli[i].getMarker()
            });
          }
          $scope.$apply();
@@ -900,3 +972,18 @@ var app = angular
 
     });
 
+
+
+//   GAME REFINEMENTS
+// Add a new feature to the game where when the player clicks
+//  a bouncing icon (ready passenger), the nearest heli is automatically diverted.  Switch helicopters if necessary.
+//  Dispatch algorithm is also simpler - always dispatch the nearest helicopter when a passenger is clicked,
+//  go to next nearest if that one is full, put in waiting queue if no helis avail.
+//  Also refactor the heli status table to show the passenger and pickup queues, with status.
+//  Do not show the long passenger list, just show a waiting queue. 
+//  Helis can have breakdowns and be stranded for some time.  Passengers will then "jump out" to be picked up again.
+//  Passengers in helicopters pickup queue immediately go to the waiting queue, as do passengers. 
+//  Remove map panning
+//
+//  Play a LOT with it all!!!  I am a Javascript, and developer kung fu engineer.  I kick ass and train hard!! I take
+//  on all opponents, especially the hardest ones! 
