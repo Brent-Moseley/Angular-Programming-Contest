@@ -343,6 +343,7 @@ var app = angular
        };
 
 
+       var num_helis = 3;
 
         //  Helicopter constructor function
         //  Constructor takes a start X and Y (make random in simulation)
@@ -386,7 +387,7 @@ var app = angular
           }          
           this.addPickup = function (newPassenger) {
             console.log ('  Heli ' + name + ' reporting in on pickup for:' + newPassenger.getName());
-            if (pickup.length + passenger.length < 4 && goingToDest) {
+              if (pickup.length + passenger.length < 4 && goingToDest) {
               // 4 here, because the destination counts as one "pickup"
               // pickup should always be empty if we are going to dest,
               // so can add this new pickup if there is space
@@ -396,6 +397,7 @@ var app = angular
               pickup.push (newPassenger);  // Accept new passenger
               currentTarget = 0;
               setFirst();
+              reOrder();
               return true;          
             }
             else if (pickup.length + passenger.length < 3 && !goingToDest) { 
@@ -405,12 +407,14 @@ var app = angular
                 currentTarget = 0;
                 setFirst();
               }
+              else reOrder();
               return true;
             }
             else {
               console.log ('  No can do!!! Already have:' + pickup.length + ' ' + passenger.length + ' ' + goingToDest);
               return false;
             }
+            reOrder();     // Shuffle passengers to get nearest first, then second nearest, etc. 
           }
 
 
@@ -457,6 +461,41 @@ var app = angular
 
           }
 
+          function reOrder () {
+            console.log ('   *** REORDER ***');
+            var distance_table = [];
+            angular.forEach (pickup, function (passenger, i) {
+              distance_table.push ({
+                index: i,
+                dist: distanceBetweenGeoPoints(posY, posX, passenger.getLat(), passenger.getLng()),
+                pass: passenger
+              });
+            });
+
+            var j = 0;
+            while (j < distance_table.length-1) {
+              if (distance_table[j+1]['dist'] < distance_table[j]['dist']) {
+                // switch them
+                var temp = distance_table[j+1];
+                distance_table[j+1] = distance_table[j];
+                distance_table[j] = temp;
+                j = -1;
+              }
+              j++;
+            }
+            console.log ('  Updated distance table in heli reOrder:');
+            console.log (distance_table);
+            pickup = [];
+            angular.forEach (distance_table, function (dist) {
+              pickup.push(dist.pass);
+            });
+            console.log ('   And resulting pickup queue:');
+            console.log (pickup);
+            setFirst();
+
+          }
+
+
           this.setDestination = function (dest) {
             destination = dest;
           }
@@ -471,11 +510,12 @@ var app = angular
             var dx = target.getLng() - posX;
             var dy = target.getLat() - posY;
             // distance in coordinate variance, velocity in mph, timeSlice in ms
-            var moves = distancePerMove (dx, dy, dist, 1500, 50);  // 1500 mph
+            var moves = distancePerMove (dx, dy, dist, 2500, 50);  // 2500 mph now
             movex = moves[0];
             movey = moves[1];
           }
 
+          // times   3:20.1, 2:59.7, 2:55.4, 2:46, 2:41.9
 
           function setFirst () {
             setTarget (pickup[0]);
@@ -709,14 +749,14 @@ var app = angular
  
          var shortest = 999;
          var shortesti = shortest_pass = shortest_heli =  0;
-         for (var heli = 0; heli < 3; heli++) {
+         for (var heli = 0; heli < num_helis; heli++) {
            // Considering just the next available passenger in the waiting queue,
            // Find the available helicopter that is closest and then assign it for
-           // the pickup.   cc is the helicopter
+           // the pickup.
            for (var pass = 0; pass < waiting_queue.length; pass++) {
              if (distance_table[heli][pass].dist < shortest) {
-               if (!helicopters[heli].goingToDestination() || distance_table[heli][pass].dist < 7) {
-                 // Add this newest if not going to destination or diverting less than 7 miles
+               if (!helicopters[heli].goingToDestination() || distance_table[heli][pass].dist < 8) {
+                 // Add this newest if not going to destination or diverting less than 17 miles
                  shortest = distance_table[heli][pass].dist;
                  shortest_heli = heli;
                  shortest_pass = pass;
@@ -734,8 +774,12 @@ var app = angular
            console.log (waiting_queue[shortesti]);
            console.log ('  Waiting queue before:');
            console.log (waiting_queue);
+           // if (Math.random(1) * 100 < 20) {
+           //   shortest_heli = 0;
+           //   // dispatch is sometimes lazy and just picks the first heli
+           // }
            var gtg = dispatchAddPickupHC (shortest_heli, waiting_queue[shortesti]);   // add closest to HC pickup queue
-           if (!gtg) console.log ('ERROR:  heli could not do pickup!!');
+           if (!gtg) console.log ('ERROR:  heli could not do pickup!!');     // Should never see this!
            else waiting_queue.splice (shortesti, 1);   // remove from waiting list    
            console.log ('  Waiting queue after:');
            console.log (waiting_queue);     
