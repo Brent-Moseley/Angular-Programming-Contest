@@ -1,251 +1,43 @@
-var app = angular
-    .module('courttimes',[])
-    .controller('MainController',function($scope){
+angular
+    .module('app')
+    .controller('MainController', ['passengerservice', '$scope', MainController]);
 
-        //  put this in a main controller, with all the timer blocks and app level vars
-        var markers = [];
+    function MainController(passengerservice,  $scope){
+      //   Game URL Local:   file://localhost/Users/brentmoseley/Projects/Angular-contest/public/mappage.html
+      //  Application level variables:
+      var markers = [];
+      var passenger_list = [];
+      var helicopters = [];
+      var waiting_queue = [];
+      var storms = [];
+      var isStorm = false;
+
+      var targetLat = 33.484467;
+      var targetLng = -111.97536;
+      var passengers = passengerservice.getPassengerList();
+      var num_helis = 5;   // app level var in main controller 
+
+
         function getAll () {
           showOnMap();
           return true;
         };
 
-
-        //  HELPER FUNCTIONS   put in a helpers directory under public
-        /*
-        ** Computes distance between two points specified with lat and lng coordinates.
-        */
-        function distanceBetweenGeoPoints(lat1, lng1, lat2, lng2){
-          var
-            milesPerLatDegree = 68.68,
-            milesPerLngDegree = 57.68,
-            deltaLat = lat2 - lat1,
-            deltaLng = lng2 - lng1,
-            latMiles = deltaLat * milesPerLatDegree,
-            lngMiles = deltaLng * milesPerLngDegree;
-
-          return Math.sqrt( latMiles * latMiles + lngMiles * lngMiles );
-        }
-        //  Also need amount to move X and Y each time interval to reach
-        // destination and go max speed (1200 mph)
-
-        // distance in coordinate variance, velocity in mph, timeSlice in ms
-        function distancePerMove (dx, dy, dist, vel, timeSlice) {
-          var milesPerLatDegree = 68.68,
-              milesPerLngDegree = 57.68;
-          dx = dx * milesPerLngDegree;
-          dy = dy * milesPerLatDegree; 
-          var time = dist / vel;
-          var tshours = timeSlice / 3600000;
-          var moves = time / tshours;
-          var movex = dx / moves / milesPerLngDegree;
-          var movey = dy / moves / milesPerLatDegree;
-          return [movex, movey];
-          //  Worked the first time, because B!!!
-        }
-
-        /*
-        ** Computes compass heading to travel from source to destination,
-        ** where points are specified with lat and lng coordinates.
-        **
-        ** Returns either N, S, E, W, NW, NE, SW, or SE.
-        */
-        function computeHeading(sourceLat, sourceLng, destLat, destLng){
-          var
-            milesPerLatDegree = 68.68,
-            milesPerLngDegree = 57.68,
-            deltaLat = destLat - sourceLat,
-            deltaLng = destLng - sourceLng,
-            latMiles = deltaLat * milesPerLatDegree,
-            lngMiles = deltaLng * milesPerLngDegree,
-            latDirection = latMiles < 0 ? "S" : "N",
-            lngDirection = lngMiles < 0 ? "W" : "E";
-
-            if ( Math.abs(latMiles) > 2.0 * Math.abs(lngMiles) ) return latDirection;
-            if ( Math.abs(lngMiles) > 2.0 * Math.abs(latMiles) ) return lngDirection;
-            return latDirection + lngDirection;
-        }
-
-
-        //
-        //  DATA - put in a service to just return this JSON (), simulated http call to a backend
-        var passengers = [
-          {
-            "name": "Rick James",
-            "city": "Phoenix",
-            "zip": 85051,
-            "lat": 33.5791048,
-            "lng": -112.1515555
-          },
-          {
-            "name": "Freddie Mercury",
-            "city": "Scottsdale",
-            "zip": 85032,
-            "lat": 33.617367,
-            "lng": -111.879048
-          },
-          {
-            "name": "Eddie Money",
-            "city": "Fountain Hills",
-            "zip": 85258,
-            "lat": 33.5541185,
-            "lng": -111.7444259
-          },
-          {
-            "name": "Yngwie Malmsteem",
-            "city": "Phoenix",
-            "zip": 85053,
-            "lat": 33.6346034,
-            "lng": -112.1497104
-          },
-          {
-            "name": "John Bonham",
-            "city": "Phoenix",
-            "zip": 85021,
-            "lat": 33.5778487,
-            "lng": -112.0917989
-          },
-          {
-            "name": "Steve Perry",
-            "city": "Phoenix",
-            "zip": 85018,
-            "lat": 33.454372,
-            "lng": -111.963068
-          },
-          {
-            "name": "David Paich",
-            "city": "Phoenix",
-            "zip": 85004,
-            "lat": 33.6122129,
-            "lng": -111.9655176
-          },
-          {
-            "name": "Alex Van Halen",
-            "city": "Scottsdale ",
-            "zip": 85254,
-            "lat": 33.5815568,
-            "lng": -111.933732
-          },
-          {
-            "name": "Amy Lee",
-            "city": "Cave Creek",
-            "zip": 85266,
-            "lat": 33.757534,
-            "lng": -111.9524
-          },
-          {
-            "name": "Candy Dulfer",
-            "city": "Scottsdale",
-            "zip": 85018,
-            "lat": 33.454467,
-            "lng": -111.87536
-          },
-          {
-            "name": "Paul Hardcastle",
-            "city": "Phoenix",
-            "zip": 85041,
-            "lat": 33.3903924,
-            "lng": -112.2765659
-          },
-          {
-            "name": "Joe Satriani",
-            "city": "Scottsdale",
-            "zip": 85260,
-            "lat": 33.6081362,
-            "lng": -111.9201204
-          },
-          {
-            "name": "Lindsey Stirling",
-            "city": "Phoenix",
-            "zip": 85017,
-            "lat": 33.504739,
-            "lng": -112.127767
-          },
-          {
-            "name": "Stewart Copeland",
-            "city": "Chandler",
-            "zip": 85224,
-            "lat": 33.298039,
-            "lng": -111.86955
-          },
-          {
-            "name": "MC Hammer",
-            "city": "Queen Creek",
-            "zip": 85297,
-            "lat": 33.1904345,
-            "lng": -111.6938745
-          },
-          {
-            "name": "Dizzy Gillespie",
-            "city": "Glendale",
-            "zip": 85306,
-            "lat": 33.6192465,
-            "lng": -112.1850876
-          },
-          {
-            "name": "Sting",
-            "city": "Chandler",
-            "zip": 85018,
-            "lat": 33.275516,
-            "lng": -111.879572
-          },
-          {
-            "name": "Adam Levine",
-            "city": "Mesa",
-            "zip": 85041,
-            "lat": 33.4284764,
-            "lng": -111.7052862
-          },
-          {
-            "name": "Christina Aguilera",
-            "city": "Litchfield Park",
-            "zip": 85260,
-            "lat": 33.456322,
-            "lng": -112.4083387
-          },
-          {
-            "name": "Sarah Vaughan",
-            "city": "Anthem",
-            "zip": 85017,
-            "lat": 33.864549,
-            "lng": -112.149245
-          },
-          {
-            "name": "Charlie Parker",
-            "city": "Avondale",
-            "zip": 85224,
-            "lat": 33.45398,
-            "lng": -112.304333
-          },
-          {
-            "name": "Ian Astbury",
-            "city": "Cave Creek",
-            "zip": 85297,
-            "lat": 33.784636,
-            "lng": -111.95681
-          },
-          {
-            "name": "Jonathan Cain",
-            "city": "Glendale",
-            "zip": 85306,
-            "lat": 33.672246,
-            "lng": -112.222106
-          },          
-          //  Special Destination Object, always the last in the list. 
-          {
-            "name": "Destination",
-            "city": "Destination",
-            "zip": 85306,
-            "lat": 33.484467,
-            "lng": -111.97536
-          }          
-        ];
-
-
-        // put in main controller
-        var targetLat = 33.484467;
-        var targetLng = -111.97536;
-
         // put this in map component directory
+        //  Directive guide:   https://docs.angularjs.org/guide/directive
+        //  Start by making tables into directives.
+        //  It does not make sense to make the helicopters, passengers, and storms into directives since
+        //  they do not have an attribute in the DOM.  Let them be classes in separate component files, and
+        //  have a model component and a controller component.
+        //  Create a table directive, a row directive, and a cell directive that can be re-used in my financial 
+        //  tracker, like a reusable component.
+        //  Just Do.
+        //  Make the map be a directive if it makes sense for organization. 
+        // http://kirkbushell.me/when-to-use-directives-controllers-or-services-in-angular/
+        //  Use Directives for DOM manipulation and user interaction.  Use services for handling data and talking
+        //  to the backend, and can be used like the model in Ruby - as data containers. 
+        //  Controllers just make the connection between the services (model) and the directives, and handle complex
+        //  business layer logic for the views.
         var mapOptions = {
           zoom: 12,
           mapTypeControl: false,
@@ -333,309 +125,19 @@ var app = angular
        };
 
 
-        var num_helis = 5;   // app level var in main controller 
-
         //  Object goes in the model dir, break functions up into doing one thing each, one level of 
         //  abstraction or responsibility, more details provided lower.
         // 
-        //  Helicopter constructor function
-        //  Constructor takes a start X and Y (make random in simulation)
-        //  Coordinate are lat / lng
-        function Helicopter (startX, startY, hmarker, hname) {
-          // private vars
-          var posX = startX,
-              posY = startY,
-              name = hname,
-              movex = 0,     // X movement, per move, to get to current target
-              movey = 0,
-              pickup = [],
-              passenger = [],
-              marker = hmarker,
-              destination = {},    // special destination
-              goingToDest = false,
-              currentTarget = -1;   // current index number of passenger to get
-          //var mylen = text.length;     // private var
-          //this.content = text;         // instance var
-          //this.len = mylen.toString() + " chars.";  
-
-          // Instance methods
-          this.getNumPassengers = function () {
-            return passenger.length;
-          }
-          this.getPickups = function () {
-            return pickup;
-          }
-          this.getPassengers = function () {
-            return passenger;
-          }          
-          this.getNumPickups = function () {
-            if (goingToDest) return 0;
-            else return pickup.length;
-          }
-          this.goingToDestination = function () {
-            return goingToDest;
-          }
-          this.getMarker = function () {
-            debugger;
-            return marker;
-          }
-          this.getX = function () {
-            return posX;
-          }
-          this.getY = function () {
-            return posY;
-          }
-          this.getMoveX = function () {
-            return movex;
-          }
-          this.getMoveY = function () {
-            return movey;
-          }          
-          this.getName = function () {
-            return name;
-          }          
-          this.addPickup = function (newPassenger) {
-            console.log ('  Heli ' + name + ' reporting in on pickup for:' + newPassenger.getName());
-            // if (Math.random(1) * 100 < 65) {
-            //   return false;
-            //   // they are often lazy or not ready and just won't do a pickup!!
-            // }
-            if (pickup.length + passenger.length < 4 && goingToDest) {
-              // 4 here, because the destination counts as one "pickup"
-              // pickup should always be empty if we are going to dest,
-              // so can add this new pickup if there is space
-              console.log (' Adding when going to dest');
-              goingToDest = false;
-              pickup.pop();         // remove the destination
-              pickup.push (newPassenger);  // Accept new passenger
-              currentTarget = 0;
-              setFirst();
-              reOrder();
-              return true;          
-            }
-            else if (pickup.length + passenger.length < 3 && !goingToDest) { 
-              console.log (' Adding regular pickup');
-              pickup.push (newPassenger);  // Accept new passenger
-              if (currentTarget == -1) {
-                currentTarget = 0;
-                setFirst();
-              }
-              else reOrder();
-              return true;
-            }
-            else {
-              console.log ('  No can do!!! Already have:' + pickup.length + ' ' + passenger.length + ' ' + goingToDest);
-              return false;
-            }
-            reOrder();     // Shuffle passengers to get nearest first, then second nearest, etc. 
-          }
-
-          this.bump = function (otherMovex, otherMovey) {
-            console.log (' Bumped!! ' + otherMovex*15 + ' ' + otherMovey*15);
-            if (movex == 0 && movey == 0) {
-              console.log ('Not moving, so taking other velocity.');
-              posX += otherMovex * 15;
-              posY += otherMovey * 15;            }
-            else {
-              console.log (' bumped based on my velocity: ' + movex*10 + ' ' + movey*10);
-              posX -= movex * 10;
-              posY -= movey * 10;
-            }
-            setFirst();   // set course again!!
-          }
-
-          // primary run function, call on a regular basis to give the
-          // helicopter a "move" turn.
-          this.run = function () {
-            if (pickup.length > 0) {
-              var there = move (currentTarget);  // move one step to target
-              if (there) {
-                console.log ('Arrived at: ' + pickup[currentTarget].getCity());
-                if (pickup[currentTarget].getCity() == 'Destination') {
-                  // Put into a function called unload
-                  console.log ('At final destination!!');
-                  goingToDest = false;
-                  movex = movey = 0;
-                  pickup = [];
-                  angular.forEach (passenger, function (pass) {
-                    pass.status = "Arrived";
-                  });
-                  passenger = [];
-                  currentTarget = -1;
-                  $scope.allPassengersArrived = allPassengersArrived();
-                  if ($scope.allPassengersArrived) alert ("All Done!!");   // **** So hard to find endpoint of the game here,
-                                                                           // put into a helper function called from the main
-                                                                           // controller
-                  console.log ('passenger_list now: ' + String(passenger_list.length));
-                  return;
-                }
-                pickup[currentTarget].haveArrived(name);
-                
-                passenger.push(pickup.shift());
-                if (pickup.length == 0 && passenger.length == 0) {
-                  // No passengers left to pick up
-                  currentTarget = -1;
-                  return;
-                }
-
-                // Put all this into a function below called setDestinationWhenFull
-                if (passenger.length == 3 || 
-                    (passenger.length > 0 && pickup.length == 0)) {
-                  // we have the 3 passengers, now add destination
-                  pickup.push (destination);
-                  goingToDest = true;
-                }
-                setTarget (pickup[currentTarget]);
-                // So hard to read, this if block is way too long!! 
-              }
-
-            }
-
-          }
-
-          this.setDestination = function (dest) {
-            //  Why this function?  
-            destination = dest;
-          }
-
-          // put small functions and getters at top of object definition
-
-          // Helicopter private functions
-          function setTarget (target) {
-            var dist = distanceBetweenGeoPoints(posY, posX, target.getLat(), target.getLng()); // lat1, lng1, lat2, lng2
-            var dx = target.getLng() - posX;
-            var dy = target.getLat() - posY;
-            // distance in coordinate variance, velocity in mph, timeSlice in ms
-            var moves = distancePerMove (dx, dy, dist, 2800, 50);  // 1500 mph, speed is very important, put at top of object as constant
-            movex = moves[0];
-            movey = moves[1];
-          }
-
-         // TIMES:  2:56, 2:46.4, 2:43.6, 1:59.6, 1:54.9
-
-          function reOrder () {
-            console.log ('   *** REORDER ***');
-            var distance_table = [];
-            angular.forEach (pickup, function (passenger, i) {
-              distance_table.push ({
-                index: i,
-                dist: distanceBetweenGeoPoints(posY, posX, passenger.getLat(), passenger.getLng()),
-                pass: passenger
-              });
-            });
-
-            var j = 0;
-            while (j < distance_table.length-1) {
-              if (distance_table[j+1]['dist'] < distance_table[j]['dist']) {
-                // switch them
-                var temp = distance_table[j+1];
-                distance_table[j+1] = distance_table[j];
-                distance_table[j] = temp;
-                j = -1;
-              }
-              j++;
-            }
-            console.log ('  Updated distance table in heli reOrder:');
-            console.log (distance_table);
-            pickup = [];
-            angular.forEach (distance_table, function (dist) {
-              pickup.push(dist.pass);
-            });
-            console.log ('   And resulting pickup queue:');
-            console.log (pickup);
-            setFirst();
-
-          }
-
-          function setFirst () {
-            setTarget (pickup[0]);
-          }
-
-          function move (target) {
-            var dx = pickup[target].getLng() - posX;
-            var dy = pickup[target].getLat() - posY;
-            if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
-              return true;
-            }
-            // var moveX = dx && dx / Math.abs(dx);
-            // var moveY = dy && dy / Math.abs(dy);
-            // var newX = posX + moveX * 0.001;
-            // var newY = posY + moveY * 0.001;
-            posX += movex;
-            posY += movey;
-            if (isStorm) {
-              var closeX = Math.abs(posX - stormX);
-              var closeY = Math.abs(posY - stormY-0.12);
-              //debugger;
-              if (closeX < 0.08 && closeY < 0.08) {
-                // too damn close to the storm!!!
-                posX += Math.random (1) * 0.06 - 0.03;
-                posY += Math.random (1) * 0.06 - 0.03;
-                setFirst();   // set course again!!
-              }
-            }            
-            var newPos = new google.maps.LatLng(posY, posX);
-            marker.setPosition (newPos);
-            // posX = newX;
-            // posY = newY;
-            return false;
-          }  
-        }     
-
-        // Passenger constructor function
-        // Put this into Passenger model
-        function Passenger (options, pNumber) {
-          // publicly accessible instance vars
-          this.name = options.name;
-          this.city = options.city;
-          this.status = "Not ready";
-
-          // private vars
-          var zip = options.zip,
-              lat = options.lat,
-              lng = options.lng,
-              number = pNumber;
-
-          this.getLat = function () {
-            return lat;
-          }
-          this.getLng = function () {
-            return lng;
-          }
-          this.getName = function () {
-            return this.name;
-          }
-          this.getCity = function () {
-            return this.city;
-          }
-          this.getStatus = function () {
-            return this.status;
-          }
-          this.clickMe = function () {
-            google.maps.event.trigger(markers[number], 'click');
-          }    
-          this.haveArrived = function (heli) {
-            markers[number].setMap(null);
-            this.status = "Riding " + heli;
-          }                
-        }
-       
-       var passenger_list = [];
-       var helicopters = [];
-       var waiting_queue = [];
-       var storms = [];
-       var isStorm = false;
-       var stormX, stormY, stormMX, stormMY, stormOpacity = 0;
-
 
        //  Start of Execution - put this into the main controller
        showOnMap();
        createPassengers();
        createHelicopters();
+       createStorms();
        var start = new Date().getTime();
        $scope.time = '';
        $scope.isStorm = false;
-       $scope.passengersShow = passengers.slice (0, -1);
+       $scope.passengersShow = passengers.slice (0, -1);   // Supposed to not show the destination
 
 
 
@@ -655,7 +157,9 @@ var app = angular
 
        setInterval(function(){
          $scope.isStorm = isStorm;
-         if (isStorm) runStorms ();
+         if (isStorm) {
+           isStorm = storms[0].runStorms ();
+         }
        } , 130);    // Expensive operation, only call every third second
 
        setInterval(function(){
@@ -668,12 +172,13 @@ var app = angular
          if (Math.floor (Math.random() * 100) < 50) {  // 30
            console.log ('creating storm');
            // 5% chance every 3 seconds to kick off a big storm
-           createStorms();
+           storms[0].startNew();
+           isStorm = true;
          }
        } , 3000);  
 
       setInterval(function(){       
-        var list = passengersNotReady();
+        var list = getPassengersNotReady();
         if (list.length > 0) {
           var who = Math.floor (Math.random() * list.length);
           console.log ('Computer clicking: ' + who);
@@ -692,7 +197,7 @@ var app = angular
          return false;
        }
 
-       function passengersNotReady () {
+       function getPassengersNotReady () {
          var notReady = [];
          angular.forEach (passenger_list, function (pass) {
            if (pass.getStatus() == 'Not ready' 
@@ -726,39 +231,14 @@ var app = angular
 
        function createStorms () {
          // Most of this should be in a constructor of a Storm class
-         var randLat = Math.random (1) * 0.65 + 33.15;
-         var randLng = -111.8 - Math.random (1) * 0.48;
-         stormX = randLng;
-         stormY = randLat;
-         stormMX = Math.random (1) * 0.03 - 0.015;
-         stormMY = Math.random (1) * 0.03 - 0.015;
-         var stormLatlng = new google.maps.LatLng(randLat, randLng);
-         if (storms.length == 0) {
-           var markerStorm = createMarker (map, stormLatlng, "", -10);
-           storms.push(markerStorm);
-         }
-         else {
-           console.log ('Using existing');
-           storms[0].setOpacity (0);
-           storms[0].setPosition (stormLatlng);
-         }
-         stormOpacity = 0;
-         isStorm = true;        
+         var stormLatlng = new google.maps.LatLng(30, -110);
+         var markerStorm = createMarker (map, stormLatlng, "", -10);
+         console.log ('Creating storm marker');
+         storms.push(new Storm(markerStorm));
+         console.log ('Storm queue:');
+         console.log (storms);
        }
 
-       function runStorms () {
-         stormX += stormMX;
-         stormY += stormMY;
-         if (stormX < -113 || stormX > -111 ||
-             stormY < 32.5 || stormY > 34.5) {
-           // Storm is off boundary
-           isStorm = false;
-         }
-         stormOpacity += 0.07;
-         var newPos = new google.maps.LatLng(stormY, stormX);
-         storms[0].setPosition (newPos);   
-         storms[0].setOpacity (stormOpacity);      
-       }
 
        function collisionDetector () {
          //  Put this in Dispatch object
@@ -937,8 +417,9 @@ var app = angular
        function dispatch () {
          // $scope.allPickups = [];
          // $scope.allPassengers = [];
+         var storm = storms.length > 0 ? storms[0] : null;
          for (var i = 0; i < num_helis; i++)
-           helicopters[i].run();
+           helicopters[i].run(storm);
          //statusUpdate (helicopters);
          var now = new Date().getTime();
          now -= start;
@@ -970,7 +451,7 @@ var app = angular
          $scope.$apply();
        }
 
-    });
+    };
 
 
 
