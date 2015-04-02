@@ -208,7 +208,7 @@ angular
 
        function createPassengers () {
          angular.forEach (passengers, function (passenger, i) {
-           passenger_list[i] = new Passenger(passenger, i);
+           passenger_list[i] = new Passenger(passenger, i, markers[i]);
            passenger_list[i].number = i;
          });
 
@@ -418,8 +418,14 @@ angular
          // $scope.allPickups = [];
          // $scope.allPassengers = [];
          var storm = storms.length > 0 ? storms[0] : null;
-         for (var i = 0; i < num_helis; i++)
-           helicopters[i].run(storm);
+         for (var i = 0; i < num_helis; i++) {
+           if (helicopters[i].run(storm) == "Arrival") {
+             $scope.allPassengersArrived = allPassengersArrived();
+             if ($scope.allPassengersArrived) alert ("All Done!!");   // **** So hard to find endpoint of the game here,
+                                                                   // put into a helper function called from the main
+                                                                   // controller
+           }
+         }
          //statusUpdate (helicopters);
          var now = new Date().getTime();
          now -= start;

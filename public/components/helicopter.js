@@ -121,20 +121,17 @@ function Helicopter (startX, startY, hmarker, hname) {
           });
           passenger = [];
           currentTarget = -1;
-          $scope.allPassengersArrived = allPassengersArrived();
-          if ($scope.allPassengersArrived) alert ("All Done!!");   // **** So hard to find endpoint of the game here,
-                                                                   // put into a helper function called from the main
-                                                                   // controller
           console.log ('passenger_list now: ' + String(passenger_list.length));
-          return;
+          return "Arrival";
         }
         pickup[currentTarget].haveArrived(name);
         
         passenger.push(pickup.shift());
         if (pickup.length == 0 && passenger.length == 0) {
-          // No passengers left to pick up
+          // No passengers left to pick up.... Don't Think we ever hit this!!
+          console.log (' ********   WHOA   *********');
           currentTarget = -1;
-          return;
+          return "Idle";
         }
 
         // Put all this into a function below called setDestinationWhenFull
@@ -145,11 +142,12 @@ function Helicopter (startX, startY, hmarker, hname) {
           goingToDest = true;
         }
         setTarget (pickup[currentTarget]);
+        return "Pickup";
         // So hard to read, this if block is way too long!! 
       }
-
+      return "Running";
     }
-
+    return "No Pickups";
   }
 
   this.setDestination = function (dest) {

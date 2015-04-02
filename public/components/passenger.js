@@ -1,6 +1,6 @@
 // Passenger constructor function
 // Put this into Passenger model
-function Passenger (options, pNumber) {
+function Passenger (options, pNumber, pMarker) {
   // publicly accessible instance vars
   this.name = options.name;
   this.city = options.city;
@@ -10,7 +10,8 @@ function Passenger (options, pNumber) {
   var zip = options.zip,
       lat = options.lat,
       lng = options.lng,
-      number = pNumber;
+      number = pNumber,
+      marker = pMarker;
 
   this.getLat = function () {
     return lat;
@@ -28,10 +29,10 @@ function Passenger (options, pNumber) {
     return this.status;
   }
   this.clickMe = function () {
-    google.maps.event.trigger(markers[number], 'click');
+    google.maps.event.trigger(marker, 'click');
   }    
   this.haveArrived = function (heli) {
-    markers[number].setMap(null);
+    marker.setMap(null);
     this.status = "Riding " + heli;
   }                
 }
