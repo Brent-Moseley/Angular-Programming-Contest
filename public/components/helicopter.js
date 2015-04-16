@@ -13,7 +13,8 @@ function Helicopter (startX, startY, hmarker, hname) {
       marker = hmarker,
       destination = {},    // special destination
       goingToDest = false,
-      currentTarget = -1;   // current index number of passenger to get
+      currentTarget = -1,   // current index number of passenger to get
+      heliSpeed = 2800;     // Set speed of heli
   //var mylen = text.length;     // private var
   //this.content = text;         // instance var
   //this.len = mylen.toString() + " chars.";  
@@ -52,13 +53,11 @@ function Helicopter (startX, startY, hmarker, hname) {
   }          
   this.getName = function () {
     return name;
-  }          
+  }
+
   this.addPickup = function (newPassenger) {
     console.log ('  Heli ' + name + ' reporting in on pickup for:' + newPassenger.getName());
-    // if (Math.random(1) * 100 < 65) {
-    //   return false;
-    //   // they are often lazy or not ready and just won't do a pickup!!
-    // }
+
     if (pickup.length + passenger.length < 4 && goingToDest) {
       // 4 here, because the destination counts as one "pickup"
       // pickup should always be empty if we are going to dest,
@@ -83,25 +82,27 @@ function Helicopter (startX, startY, hmarker, hname) {
       return true;
     }
     else {
+      //  This is an error condition, should never hit this if dispatch is working.
       console.log ('  No can do!!! Already have:' + pickup.length + ' ' + passenger.length + ' ' + goingToDest);
       return false;
     }
     reOrder();     // Shuffle passengers to get nearest first, then second nearest, etc. 
   }
 
-  this.bump = function (otherMovex, otherMovey) {
-    console.log (' Bumped!! ' + otherMovex*15 + ' ' + otherMovey*15);
-    if (movex == 0 && movey == 0) {
-      console.log ('Not moving, so taking other velocity.');
-      posX += otherMovex * 15;
-      posY += otherMovey * 15;            }
-    else {
-      console.log (' bumped based on my velocity: ' + movex*10 + ' ' + movey*10);
-      posX -= movex * 10;
-      posY -= movey * 10;
-    }
-    setFirst();   // set course again!!
-  }
+  //  This function is used by the collision detector, not currently being used. 
+  // this.bump = function (otherMovex, otherMovey) {
+  //   console.log (' Bumped!! ' + otherMovex*15 + ' ' + otherMovey*15);
+  //   if (movex == 0 && movey == 0) {
+  //     console.log ('Not moving, so taking other velocity.');
+  //     posX += otherMovex * 15;
+  //     posY += otherMovey * 15;            }
+  //   else {
+  //     console.log (' bumped based on my velocity: ' + movex*10 + ' ' + movey*10);
+  //     posX -= movex * 10;
+  //     posY -= movey * 10;
+  //   }
+  //   setFirst();   // set course again!!
+  // }
 
   // primary run function, call on a regular basis to give the
   // helicopter a "move" turn.
@@ -112,38 +113,22 @@ function Helicopter (startX, startY, hmarker, hname) {
         console.log ('Arrived at: ' + pickup[currentTarget].getCity());
         if (pickup[currentTarget].getCity() == 'Destination') {
           // Put into a function called unload
-          console.log ('At final destination!!');
-          goingToDest = false;
-          movex = movey = 0;
-          pickup = [];
-          angular.forEach (passenger, function (pass) {
-            pass.status = "Arrived";
-          });
-          passenger = [];
-          currentTarget = -1;
-          console.log ('passenger_list now: ' + String(passenger_list.length));
+          unload ();
           return "Arrival";
         }
         pickup[currentTarget].haveArrived(name);
         
-        passenger.push(pickup.shift());
+        passenger.push(pickup.shift());   // move passenger from pickup queue to passenger queue
         if (pickup.length == 0 && passenger.length == 0) {
           // No passengers left to pick up.... Don't Think we ever hit this!!
-          console.log (' ********   WHOA   *********');
+          console.log (' ********  BIG ERROR *********');
           currentTarget = -1;
           return "Idle";
         }
 
-        // Put all this into a function below called setDestinationWhenFull
-        if (passenger.length == 3 || 
-            (passenger.length > 0 && pickup.length == 0)) {
-          // we have the 3 passengers, now add destination
-          pickup.push (destination);
-          goingToDest = true;
-        }
+        setDestinationWhenFull ();
         setTarget (pickup[currentTarget]);
         return "Pickup";
-        // So hard to read, this if block is way too long!! 
       }
       return "Running";
     }
@@ -158,12 +143,37 @@ function Helicopter (startX, startY, hmarker, hname) {
   // put small functions and getters at top of object definition
 
   // Helicopter private functions
+
+  function unload () {
+    console.log ('At final destination!!');
+    goingToDest = false;
+    movex = movey = 0;
+    pickup = [];
+    angular.forEach (passenger, function (pass) {
+      pass.status = "Arrived";
+    });
+    passenger = [];
+    currentTarget = -1;
+    console.log ('passenger_list now: ' + String(passenger_list.length));  
+    return;
+  }
+
+  function setDestinationWhenFull () {
+    if (passenger.length == 3 || 
+        (passenger.length > 0 && pickup.length == 0)) {
+      // we have the 3 passengers, now add destination
+      pickup.push (destination);
+      goingToDest = true;
+    }
+    return;
+  }
+
   function setTarget (target) {
     var dist = distanceBetweenGeoPoints(posY, posX, target.getLat(), target.getLng()); // lat1, lng1, lat2, lng2
     var dx = target.getLng() - posX;
     var dy = target.getLat() - posY;
     // distance in coordinate variance, velocity in mph, timeSlice in ms
-    var moves = distancePerMove (dx, dy, dist, 2800, 50);  // 1500 mph, speed is very important, put at top of object as constant
+    var moves = distancePerMove (dx, dy, dist, heliSpeed, 50);  // 1500 mph, speed is very important, put at top of object as constant
     movex = moves[0];
     movey = moves[1];
   }
@@ -173,6 +183,7 @@ function Helicopter (startX, startY, hmarker, hname) {
   function reOrder () {
     console.log ('   *** REORDER ***');
     var distance_table = [];
+    // create a table of all distances from the helicopter to each passenger on the pickup queue
     angular.forEach (pickup, function (passenger, i) {
       distance_table.push ({
         index: i,
@@ -182,9 +193,10 @@ function Helicopter (startX, startY, hmarker, hname) {
     });
 
     var j = 0;
+    // sort distance table from shortest to longest
     while (j < distance_table.length-1) {
       if (distance_table[j+1]['dist'] < distance_table[j]['dist']) {
-        // switch them
+        // if passenger j+1 is further than j, switch them
         var temp = distance_table[j+1];
         distance_table[j+1] = distance_table[j];
         distance_table[j] = temp;
@@ -194,6 +206,7 @@ function Helicopter (startX, startY, hmarker, hname) {
     }
     console.log ('  Updated distance table in heli reOrder:');
     console.log (distance_table);
+    // And now copy distance table to pickup queue
     pickup = [];
     angular.forEach (distance_table, function (dist) {
       pickup.push(dist.pass);
@@ -212,22 +225,19 @@ function Helicopter (startX, startY, hmarker, hname) {
     var dx = pickup[target].getLng() - posX;
     var dy = pickup[target].getLat() - posY;
     if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
+      // if we have arrived at the pickup target, return true to indicate this.
       return true;
     }
-    // var moveX = dx && dx / Math.abs(dx);
-    // var moveY = dy && dy / Math.abs(dy);
-    // var newX = posX + moveX * 0.001;
-    // var newY = posY + moveY * 0.001;
     posX += movex;
     posY += movey;
     if (storm) {
+      // check to see if helicopter is getting hit by the current storm.
       var stormX = storm.getX();
       var stormY = storm.getY();
       var closeX = Math.abs(posX - stormX);
       var closeY = Math.abs(posY - stormY-0.12);
-      //debugger;
       if (closeX < 0.08 && closeY < 0.08) {
-        // too damn close to the storm!!!
+        // too damn close to the storm, helicopter gets blown around!!!
         posX += Math.random (1) * 0.06 - 0.03;
         posY += Math.random (1) * 0.06 - 0.03;
         setFirst();   // set course again!!

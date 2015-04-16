@@ -46,11 +46,11 @@
           adventures with people.  
  -->
 
-            <div ng-repeat="heli in heliStatus">
+            <div ng-repeat="heli in heliStatus" style="text-align: left; font-size: 14px;">
               Heli: {{heli.name}} 
-              <img ng-src="{{heli.marker.icon}}">
+              <img ng-src="{{heli.marker.icon}}" style="margin-top: -12px; margin-bottom: -5px;">
               <br>
-              Pickups:
+              <strong>Pickups:</strong>
               <br>
               <table>
                 <tr ng-repeat="pickup in heli.pickups">
@@ -59,7 +59,7 @@
                   </td>
                 </tr>
               </table>
-              Passengers:
+              <strong>Passengers:</strong>
               <br>
               <table>
                 <tr ng-repeat="passenger in heli.passengers">
@@ -68,6 +68,7 @@
                   </td>
                 </tr>
               </table>   
+              <hr>
             </div>           
 
 

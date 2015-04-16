@@ -1,7 +1,8 @@
 // Storm constructor function
 function Storm (markerStorm) {
   // publicly accessible instance vars
-  // this.
+  // this.something
+
   // private vars
   var stormX, stormY, stormMX, stormMY, stormOpacity = 0;
   var marker = markerStorm;
@@ -16,6 +17,7 @@ function Storm (markerStorm) {
     return stormY;
   }  
 
+  //  Start a new storm
   this.startNew = function () {
     var randLat = Math.random (1) * 0.65 + 33.15;
     var randLng = -111.8 - Math.random (1) * 0.48;
@@ -36,10 +38,10 @@ function Storm (markerStorm) {
     stormY += stormMY;
     if (stormX < -113 || stormX > -111 ||
        stormY < 32.5 || stormY > 34.5) {
-     // Storm is off boundary
+     // Storm is off boundary, it is gone
      return false;
     }
-    stormOpacity += 0.07;
+    stormOpacity += 0.07;     // Make storm "bubble up" / fade in
     var newPos = new google.maps.LatLng(stormY, stormX);
     marker.setPosition (newPos);   
     marker.setOpacity (stormOpacity);      

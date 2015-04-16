@@ -18,11 +18,6 @@ angular
       var num_helis = 5;   // app level var in main controller 
 
 
-        function getAll () {
-          showOnMap();
-          return true;
-        };
-
         // put this in map component directory
         //  Directive guide:   https://docs.angularjs.org/guide/directive
         //  Start by making tables into directives.
@@ -48,6 +43,74 @@ angular
         var map = new google.maps.Map(document.getElementById('middle'), mapOptions);
         var bounds = new google.maps.LatLngBounds();  
 
+
+        //  Object goes in the model dir, break functions up into doing one thing each, one level of 
+        //  abstraction or responsibility, more details provided lower.
+        // 
+
+       // *******************************************************
+       //  START of Execution - put this into the main controller
+       showOnMap();
+       createPassengers();
+       createHelicopters();
+       createStorms();
+       var start = new Date().getTime();
+       $scope.time = '';
+       $scope.isStorm = false;
+       $scope.passengersShow = passengers.slice (0, -1);   // Supposed to not show the destination
+
+
+       //*****   MAIN TIMER LOOP  ********
+       // ********************************
+       //  Also keep in main controller
+       //  file://localhost/Users/brentmoseley/Projects/Angular-contest/public/mappage.html
+       setInterval(function(){
+         dispatch ();
+       } , 50);    // 50 ms
+
+       $scope.wait = '';
+       setInterval(function(){
+         dispatchManageWaitingQueue ();
+         $scope.wait = waiting_queue;
+       } , 333);    // Expensive operation, only call every third second
+
+       setInterval(function(){
+         $scope.isStorm = isStorm;
+         if (isStorm) {
+           isStorm = storms[0].runStorms ();
+         }
+       } , 130);    // Expensive operation, only call every so often
+
+       setInterval(function(){
+         // collisionDetector();   Not used right now.
+         statusUpdate (helicopters);
+       } , 100);
+
+       setInterval(function(){
+         if (isStorm) return;   // already a storm!
+         if (Math.floor (Math.random() * 100) < 50) {  // 30
+           console.log ('creating storm');
+           // 50% chance every 3 seconds to kick off a new storm
+           storms[0].startNew();
+           isStorm = true;
+         }
+       } , 3000);  
+
+      setInterval(function(){       
+        var list = getPassengersNotReady();
+        if (list.length > 0) {
+          var who = Math.floor (Math.random() * list.length);
+          console.log ('Computer clicking: ' + who);
+          list[who].clickMe();
+        }
+        }, 30000);  // 30 seconds
+
+        function getAll () {
+          // Never called???
+          showOnMap();
+          return true;
+        };
+
         function showOnMap  () {
           for (var i = 0; i < passengers.length-1; i++) {
             // Create passenger markers, do not show last one (destination)
@@ -57,7 +120,8 @@ angular
             marker = createMarker (map, myLatlng, passengers[i].name, i);
             markers.push (marker);
 
-            //map.fitBounds(bounds);
+            //map.fitBounds(bounds);     This is used if you want to adjust the map to fit the new marker,
+            //                           which we do not.
           };  
           var targetLatlng = new google.maps.LatLng(targetLat, targetLng);
           var markerTarget = createMarker (map, targetLatlng, "Destination", -1);
@@ -124,68 +188,6 @@ angular
           return current;
        };
 
-
-        //  Object goes in the model dir, break functions up into doing one thing each, one level of 
-        //  abstraction or responsibility, more details provided lower.
-        // 
-
-       //  Start of Execution - put this into the main controller
-       showOnMap();
-       createPassengers();
-       createHelicopters();
-       createStorms();
-       var start = new Date().getTime();
-       $scope.time = '';
-       $scope.isStorm = false;
-       $scope.passengersShow = passengers.slice (0, -1);   // Supposed to not show the destination
-
-
-
-       //*****   MAIN TIMER LOOP  ********
-       // ********************************
-       //  Also keep in main controller
-       //  file://localhost/Users/brentmoseley/Projects/Angular-contest/public/mappage.html
-       setInterval(function(){
-         dispatch ();
-       } , 50);    // 50
-
-       $scope.wait = '';
-       setInterval(function(){
-         dispatchManageWaitingQueue ();
-         $scope.wait = waiting_queue;
-       } , 333);    // Expensive operation, only call every third second
-
-       setInterval(function(){
-         $scope.isStorm = isStorm;
-         if (isStorm) {
-           isStorm = storms[0].runStorms ();
-         }
-       } , 130);    // Expensive operation, only call every third second
-
-       setInterval(function(){
-         collisionDetector();
-         statusUpdate (helicopters);
-       } , 750);    // Expensive operation, only call every three quarters of a second
-
-       setInterval(function(){
-         if (isStorm) return;   // already a storm!
-         if (Math.floor (Math.random() * 100) < 50) {  // 30
-           console.log ('creating storm');
-           // 5% chance every 3 seconds to kick off a big storm
-           storms[0].startNew();
-           isStorm = true;
-         }
-       } , 3000);  
-
-      setInterval(function(){       
-        var list = getPassengersNotReady();
-        if (list.length > 0) {
-          var who = Math.floor (Math.random() * list.length);
-          console.log ('Computer clicking: ' + who);
-          list[who].clickMe();
-        }
-        }, 30000);  // 30 seconds
-
        $scope.allPassengersArrived = false;
        function allPassengersArrived () {
          var arrived = 0;      // num arrived
@@ -201,7 +203,7 @@ angular
          var notReady = [];
          angular.forEach (passenger_list, function (pass) {
            if (pass.getStatus() == 'Not ready' 
-               && pass.getName() != "Destination") notReady.push(pass);
+               && pass.getName() != "Destination") notReady.push(pass); // push on a reference to the object
          });
          return notReady;
        }
@@ -216,7 +218,7 @@ angular
 
        function createHelicopters () {
          var name = ['Mean Green', 'Blue-beri', 'Hot Tamale', 'Red Chili', 'Black Hawk']
-         var i = -6;
+         var i = -6;   // refactor, no use of magic numbers
          while (helicopters.length < num_helis) {
            var randLat = Math.random (1) * 0.65 + 33.15;
            var randLng = -111.8 - Math.random (1) * 0.48;
@@ -240,42 +242,39 @@ angular
        }
 
 
-       function collisionDetector () {
-         //  Put this in Dispatch object
-         // var targetLat = 33.484467;
-         // var targetLng = -111.97536;
-         return;
-         angular.forEach (helicopters, function (heli, i) {
-            var j = i + 1;
-            //debugger;
-            var posX = heli.getX();
-            var posY = heli.getY();
-            var myMoveX = heli.getMoveX();
-            var myMoveY = heli.getMoveY();
-            while (j < num_helis) {
-              var secondX = helicopters[j].getX();
-              var secondY = helicopters[j].getY();
-              var otherMoveX = helicopters[j].getMoveX();
-              var otherMoveY = helicopters[j].getMoveY();
-              var closeX = Math.abs(posX - secondX);
-              var closeY = Math.abs(posY - secondY);
-              var sameX = (myMoveX < 0 && otherMoveX < 0) ||
-                          (myMoveX > 0 && otherMoveX > 0);
-              var sameY = (myMoveY < 0 && otherMoveY < 0) ||
-                          (myMoveY > 0 && otherMoveY > 0); 
-              if (myMoveX == 0 && myMoveY == 0) sameY = sameX = false;  
-              if (otherMoveX == 0 && otherMoveY == 0) sameY = sameX = false; 
-              if (closeX < 0.03 && closeY < 0.03 && !sameX && !sameY) {
-                 // heli collision!!
+       //  collision Detector currently not used. 
+       // function collisionDetector () {
+       //   angular.forEach (helicopters, function (heli, i) {
+       //      var j = i + 1;
+       //      //debugger;
+       //      var posX = heli.getX();
+       //      var posY = heli.getY();
+       //      var myMoveX = heli.getMoveX();
+       //      var myMoveY = heli.getMoveY();
+       //      while (j < num_helis) {
+       //        var secondX = helicopters[j].getX();
+       //        var secondY = helicopters[j].getY();
+       //        var otherMoveX = helicopters[j].getMoveX();
+       //        var otherMoveY = helicopters[j].getMoveY();
+       //        var closeX = Math.abs(posX - secondX);
+       //        var closeY = Math.abs(posY - secondY);
+       //        var sameX = (myMoveX < 0 && otherMoveX < 0) ||
+       //                    (myMoveX > 0 && otherMoveX > 0);
+       //        var sameY = (myMoveY < 0 && otherMoveY < 0) ||
+       //                    (myMoveY > 0 && otherMoveY > 0); 
+       //        if (myMoveX == 0 && myMoveY == 0) sameY = sameX = false;  
+       //        if (otherMoveX == 0 && otherMoveY == 0) sameY = sameX = false; 
+       //        if (closeX < 0.03 && closeY < 0.03 && !sameX && !sameY) {
+       //           // heli collision!!
 
-                 heli.bump(otherMoveX, otherMoveY);
-                 helicopters[j].bump(myMoveX, myMoveY);
-                 return;
-              }
-              j++;
-            }
-         });
-       }
+       //           heli.bump(otherMoveX, otherMoveY);
+       //           helicopters[j].bump(myMoveX, myMoveY);
+       //           return;
+       //        }
+       //        j++;
+       //      }
+       //   });
+       // }
 
        // create a Dispatch object for this
        function dispatchAddPickup (passenger) {
